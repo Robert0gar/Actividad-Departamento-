@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Accesos — Colonia</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="top">
+    <h1>Control de Accesos</h1>
+  </header>
+
+  <div class="stats">
+    <div class="stat accent"><div class="n" id="stat-activos">0</div><div class="l">Residentes activos</div></div>
+    <div class="stat"><div class="n" id="stat-hoy">0</div><div class="l">Visitas hoy</div></div>
+    <div class="stat amber"><div class="n" id="stat-dentro">0</div><div class="l">Visitantes dentro</div></div>
+    <div class="stat"><div class="n" id="stat-log">0</div><div class="l">Eventos en bitácora</div></div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="residentes">Residentes</button>
+    <button class="tab-btn" data-tab="visitantes">Visitantes</button>
+    <button class="tab-btn" data-tab="bitacora">Bitácora</button>
+  </nav>
+
+  <!-- ===================== PANEL RESIDENTES ===================== -->
+  <section class="panel tab-panel active" id="panel-residentes">
+    <div class="toolbar">
+      <input type="text" id="res-buscar" placeholder="Buscar por nombre o depto…">
+      <select id="res-filtro-estado">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activo</option>
+        <option value="baja">Baja</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn" id="btn-nuevo-residente">+ Nuevo residente</button>
+    </div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Depto</th><th>Teléfono</th><th>Estado</th><th>Alta</th><th></th></tr></thead>
+      <tbody id="tbody-residentes"></tbody>
+    </table>
+    <div class="empty" id="empty-residentes" style="display:none;">No hay residentes que coincidan con el filtro.</div>
+  </section>
+
+  <!-- ===================== PANEL VISITANTES ===================== -->
+  <section class="panel tab-panel" id="panel-visitantes">
+    <div class="toolbar">
+      <input type="text" id="vis-buscar" placeholder="Buscar visitante…">
+      <select id="vis-filtro-tipo"><option value="">Todos los tipos</option></select>
+      <select id="vis-filtro-estado">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activo (dentro)</option>
+        <option value="borrador">Borrador</option>
+        <option value="finalizado">Finalizado</option>
+      </select>
+      <select id="vis-filtro-depto"><option value="">Todos los deptos</option></select>
+      <div class="spacer"></div>
+      <button class="btn" id="btn-nuevo-visitante">+ Nuevo visitante</button>
+    </div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Depto</th><th>Tipo</th><th>Estado</th><th>Entrada</th><th>Salida</th><th></th></tr></thead>
+      <tbody id="tbody-visitantes"></tbody>
+    </table>
+    <div class="empty" id="empty-visitantes" style="display:none;">No hay visitantes que coincidan con el filtro.</div>
+  </section>
+
+  <!-- ===================== PANEL BITÁCORA ===================== -->
+  <section class="panel tab-panel" id="panel-bitacora">
+    <div class="toolbar">
+      <input type="text" id="log-buscar" placeholder="Buscar en bitácora…">
+      <select id="log-filtro-tipo">
+        <option value="">Todos los eventos</option>
+        <option value="residente">Residentes</option>
+        <option value="visitante">Visitantes</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Fecha</th><th>Hora</th><th>Evento</th><th>Descripción</th></tr></thead>
+      <tbody id="tbody-bitacora"></tbody>
+    </table>
+    <div class="empty" id="empty-bitacora" style="display:none;">Sin eventos registrados.</div>
+  </section>
+
+</div>
+
+<!-- ===================== MODAL RESIDENTE ===================== -->
+<div class="modal-bg" id="modal-residente" style="display:none;">
+  <div class="modal">
+    <h3 id="titulo-modal-residente">Nuevo residente</h3>
+    <form id="form-residente">
+      <input type="hidden" id="res-id">
+      <div class="field">
+        <label for="res-nombre">Nombre completo</label>
+        <input type="text" id="res-nombre" required>
+      </div>
+      <div class="field">
+        <label for="res-depto">Departamento</label>
+        <select id="res-depto"></select>
+      </div>
+      <div class="field">
+        <label for="res-telefono">Teléfono</label>
+        <input type="text" id="res-telefono">
+      </div>
+      <div class="field">
+        <label for="res-email">Correo</label>
+        <input type="email" id="res-email">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="btn-cancelar-residente">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL VISITANTE ===================== -->
+<div class="modal-bg" id="modal-visitante" style="display:none;">
+  <div class="modal">
+    <h3 id="titulo-modal-visitante">Nuevo visitante</h3>
+    <form id="form-visitante">
+      <input type="hidden" id="vis-id">
+      <div class="field">
+        <label for="vis-nombre">Nombre</label>
+        <input type="text" id="vis-nombre" required>
+      </div>
+      <div class="field">
+        <label for="vis-depto">Departamento destino</label>
+        <select id="vis-depto"></select>
+      </div>
+      <div class="field">
+        <label>Tipo de visita</label>
+        <div class="radio-group" id="vis-tipo-group"></div>
+      </div>
+      <div class="field">
+        <label for="vis-estado">Estado</label>
+        <select id="vis-estado">
+          <option value="activo">Activo (dentro)</option>
+          <option value="borrador">Borrador</option>
+          <option value="finalizado">Finalizado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="vis-notas">Notas</label>
+        <textarea id="vis-notas"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="btn-cancelar-visitante">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
