@@ -314,3 +314,35 @@ document.getElementById('vis-filtro-tipo').addEventListener('change', e => { fil
 document.getElementById('vis-filtro-estado').addEventListener('change', e => { filters.visitantes.estado = e.target.value; renderVisitantes(); });
 document.getElementById('vis-filtro-depto').addEventListener('change', e => { filters.visitantes.depto = e.target.value; renderVisitantes(); });
 
+// BITÁCORA
+function renderBitacora() {
+  const f = filters.bitacora;
+  const lista = state.bitacora.filter(b => {
+    if (f.tipo && b.tipo !== f.tipo) return false;
+    if (f.q && !b.descripcion.toLowerCase().includes(f.q.toLowerCase())) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tbody-bitacora');
+  document.getElementById('empty-bitacora').style.display = lista.length ? 'none' : 'block';
+
+  tbody.innerHTML = lista.map(b => `
+    <tr>
+      <td class="mono-dim">${b.fecha}</td>
+      <td class="mono-dim">${b.hora}</td>
+      <td><span class="badge ${b.tipo === 'residente' ? 'familiar' : 'unico'}">${b.tipo === 'residente' ? 'Residente' : 'Visitante'}</span></td>
+      <td>${escapeHtml(b.descripcion)}</td>
+    </tr>`).join('');
+
+  actualizarStats();
+}
+
+document.getElementById('log-buscar').addEventListener('input', e => { filters.bitacora.q = e.target.value; renderBitacora(); });
+document.getElementById('log-filtro-tipo').addEventListener('change', e => { filters.bitacora.tipo = e.target.value; renderBitacora(); });
+
+poblarSelectsDepto();
+poblarFiltroTipo();
+poblarRadiosTipo();
+renderResidentes();
+renderVisitantes();
+renderBitacora();
