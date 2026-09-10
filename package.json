@@ -1,0 +1,28 @@
+{
+  "name": "Actividad-Departamento-",
+  "version": "1.0.0",
+  "description": "\"# Actividad-Departamento-\"",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/serve.js",
+    "test": "jest --runInBand"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Robert0gar/Actividad-Departamento-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Robert0gar/Actividad-Departamento-/issues"
+  },
+  "homepage": "https://github.com/Robert0gar/Actividad-Departamento-#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^30.5.1",
+    "supertest": "^7.2.2"
+  }
+}

@@ -1,5 +1,6 @@
-// serve.js — arranca el servidor. app.js solo define la app de Express;
-// este archivo es el que la levanta en un puerto real.
+
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+
 const app = require('./app');
 
 const PORT = process.env.PORT || 3000;

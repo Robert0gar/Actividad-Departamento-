@@ -1,7 +1,3 @@
-// app.js — servidor Express y todas las APIs del sistema de control de accesos.
-// Este archivo SOLO define la app (no la levanta con .listen). Eso permite que
-// app.test.js pueda importarla y probarla con supertest sin necesitar un puerto real.
-// Quien sí levanta el servidor de verdad es serve.js.
 
 const express = require('express');
 
@@ -11,11 +7,6 @@ app.use(express.json());
 const DEPTO_REGEX = /^P[1-5]-[A-D]$/;
 const TIPOS_VISITA = ['proveedor', 'frecuente', 'unico', 'familiar', 'taxi'];
 
-// ------------------------------------------------------------------
-// "Base de datos" en memoria. Se reinicia si el servidor se reinicia.
-// app.test.js usa app.resetDb() antes de cada prueba para que no se
-// arrastren datos de una prueba a otra.
-// ------------------------------------------------------------------
 let db = {
   residentes: [],
   visitantes: [],
