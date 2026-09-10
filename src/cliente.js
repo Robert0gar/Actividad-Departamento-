@@ -1,5 +1,3 @@
-
-
 const DEPTOS = [];
 for (let piso = 1; piso <= 5; piso++) {
   for (const letra of ['A', 'B', 'C', 'D']) {
@@ -27,7 +25,7 @@ const filters = {
   bitacora:   { q: '', tipo: '' },
 };
 
-//  utilidades
+// ---------- utilidades ----------
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function nowParts() {
   const d = new Date();
@@ -45,24 +43,54 @@ function showToast(msg) {
   requestAnimationFrame(() => t.classList.add('show'));
   setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 2200);
 }
-
 function addLog(tipo, descripcion) {
   const { fecha, hora } = nowParts();
   state.bitacora.unshift({ id: uid(), tipo, descripcion, fecha, hora });
 }
 
-// INICIALIZACIÓN DE SELECTS
-function poblarSelectsDepto() {
+// ============================================================
+// DATOS DE EJEMPLO (para ver el caso: un depto con varios residentes)
+// ============================================================
+function sembrarEjemplo() {
+  const hoy = nowParts().fecha;
+  state.residentes.push(
+    { id: uid(), nombre: 'Melissa Torres', depto: 'P1-A', telefono: '555-0101', email: '', estado: 'activo', fechaAlta: hoy },
+    { id: uid(), nombre: 'Ricardo Gómez',  depto: 'P1-A', telefono: '555-0102', email: '', estado: 'activo', fechaAlta: hoy },
+    { id: uid(), nombre: 'Roberto Nava',   depto: 'P1-A', telefono: '555-0103', email: '', estado: 'activo', fechaAlta: hoy },
+  );
+}
+
+// ============================================================
+// INICIALIZACIÓN DE SELECTS Y RADIOS
+// ============================================================
+function poblarSelectDeptoResidente() {
   const opciones = DEPTOS.map(d => `<option value="${d}">${d}</option>`).join('');
   document.getElementById('res-depto').innerHTML = opciones;
-  document.getElementById('vis-depto').innerHTML = opciones;
-  document.getElementById('vis-filtro-depto').innerHTML =
-    '<option value="">Todos los deptos</option>' + opciones;
 }
-function poblarFiltroTipo() {
+function poblarFiltrosVisitantes() {
   document.getElementById('vis-filtro-tipo').innerHTML =
     '<option value="">Todos los tipos</option>' +
     TIPO_VISITA.map(t => `<option value="${t.v}">${t.l}</option>`).join('');
+  document.getElementById('vis-filtro-depto').innerHTML =
+    '<option value="">Todos los deptos</option>' +
+    DEPTOS.map(d => `<option value="${d}">${d}</option>`).join('');
+}
+function poblarSelectDeptoVisitante() {
+  // Solo se muestran deptos que ya tienen al menos un residente activo
+  const deptosConResidentes = [...new Set(
+    state.residentes.filter(r => r.estado === 'activo').map(r => r.depto)
+  )].sort();
+  document.getElementById('vis-depto').innerHTML = deptosConResidentes.length
+    ? deptosConResidentes.map(d => `<option value="${d}">${d}</option>`).join('')
+    : '<option value="">Sin residentes dados de alta</option>';
+}
+function poblarSelectResidentePorDepto(depto, residenteIdSeleccionado) {
+  const disponibles = state.residentes.filter(r => r.depto === depto && r.estado === 'activo');
+  const select = document.getElementById('vis-residente');
+  select.innerHTML = disponibles.length
+    ? disponibles.map(r => `<option value="${r.id}">${escapeHtml(r.nombre)}</option>`).join('')
+    : '<option value="">Sin residentes activos en este depto</option>';
+  if (residenteIdSeleccionado) select.value = residenteIdSeleccionado;
 }
 function poblarRadiosTipo() {
   document.getElementById('vis-tipo-group').innerHTML = TIPO_VISITA.map(t => `
@@ -72,6 +100,9 @@ function poblarRadiosTipo() {
     </label>`).join('');
 }
 
+// ============================================================
+// TABS
+// ============================================================
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -81,16 +112,20 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// estados
+// ============================================================
+// STATS
+// ============================================================
 function actualizarStats() {
   const hoy = nowParts().fecha;
   document.getElementById('stat-activos').textContent = state.residentes.filter(r => r.estado === 'activo').length;
-  document.getElementById('stat-hoy').textContent = state.visitantes.filter(v => v.fechaEntrada === hoy).length;
+  document.getElementById('stat-hoy').textContent = state.visitantes.filter(v => v.fecha === hoy).length;
   document.getElementById('stat-dentro').textContent = state.visitantes.filter(v => v.estado === 'activo').length;
   document.getElementById('stat-log').textContent = state.bitacora.length;
 }
 
+// ============================================================
 // RESIDENTES
+// ============================================================
 function renderResidentes() {
   const f = filters.residentes;
   const lista = state.residentes.filter(r => {
@@ -110,6 +145,7 @@ function renderResidentes() {
       <td><span class="badge ${r.estado}">${r.estado === 'activo' ? 'Activo' : 'Baja'}</span></td>
       <td class="mono-dim">${r.fechaAlta}</td>
       <td><div class="row-actions">
+        <button class="btn ghost small" data-action="visitas-residente" data-id="${r.id}">Visitas</button>
         <button class="btn ghost small" data-action="editar-residente" data-id="${r.id}">Editar</button>
         <button class="btn ghost small" data-action="baja-residente" data-id="${r.id}">${r.estado === 'activo' ? 'Baja' : 'Reactivar'}</button>
         <button class="btn danger small" data-action="borrar-residente" data-id="${r.id}">Borrar</button>
@@ -165,6 +201,7 @@ document.getElementById('form-residente').addEventListener('submit', e => {
   showToast('Residente guardado');
   renderResidentes();
   renderBitacora();
+  poblarSelectDeptoVisitante();
 });
 
 document.getElementById('tbody-residentes').addEventListener('click', e => {
@@ -176,12 +213,15 @@ document.getElementById('tbody-residentes').addEventListener('click', e => {
 
   if (btn.dataset.action === 'editar-residente') abrirModalResidente(id);
 
+  if (btn.dataset.action === 'visitas-residente') abrirModalVisitasResidente(id);
+
   if (btn.dataset.action === 'baja-residente') {
     r.estado = r.estado === 'activo' ? 'baja' : 'activo';
     addLog('residente', `${r.estado === 'baja' ? 'Baja' : 'Reactivación'} de residente ${r.nombre} (${r.depto})`);
     showToast(r.estado === 'baja' ? 'Residente dado de baja' : 'Residente reactivado');
     renderResidentes();
     renderBitacora();
+    poblarSelectDeptoVisitante();
   }
 
   if (btn.dataset.action === 'borrar-residente') {
@@ -190,13 +230,43 @@ document.getElementById('tbody-residentes').addEventListener('click', e => {
     addLog('residente', `Registro eliminado: ${r.nombre} (${r.depto})`);
     renderResidentes();
     renderBitacora();
+    poblarSelectDeptoVisitante();
   }
 });
 
 document.getElementById('res-buscar').addEventListener('input', e => { filters.residentes.q = e.target.value; renderResidentes(); });
 document.getElementById('res-filtro-estado').addEventListener('change', e => { filters.residentes.estado = e.target.value; renderResidentes(); });
 
+// ---------- historial de visitas por residente ----------
+function abrirModalVisitasResidente(residenteId) {
+  const r = state.residentes.find(x => x.id === residenteId);
+  if (!r) return;
+  document.getElementById('titulo-modal-visitas').textContent = `Visitas de ${r.nombre}`;
+
+  const visitas = state.visitantes
+    .filter(v => v.residenteId === residenteId)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+
+  const tbody = document.getElementById('tbody-visitas-residente');
+  document.getElementById('empty-visitas-residente').style.display = visitas.length ? 'none' : 'block';
+  tbody.innerHTML = visitas.map(v => `
+    <tr>
+      <td>${escapeHtml(v.nombre)} <span class="badge ${v.tipo}" style="margin-left:6px;">${labelTipo(v.tipo)}</span></td>
+      <td class="mono-dim">${v.fecha}</td>
+    </tr>`).join('');
+
+  document.getElementById('modal-visitas-residente').style.display = 'flex';
+}
+document.getElementById('btn-cerrar-visitas-residente').addEventListener('click', () => {
+  document.getElementById('modal-visitas-residente').style.display = 'none';
+});
+document.getElementById('modal-visitas-residente').addEventListener('click', e => {
+  if (e.target.id === 'modal-visitas-residente') e.target.style.display = 'none';
+});
+
+// ============================================================
 // VISITANTES
+// ============================================================
 function renderVisitantes() {
   const f = filters.visitantes;
   const lista = state.visitantes.filter(v => {
@@ -210,20 +280,23 @@ function renderVisitantes() {
   const tbody = document.getElementById('tbody-visitantes');
   document.getElementById('empty-visitantes').style.display = lista.length ? 'none' : 'block';
 
-  tbody.innerHTML = lista.map(v => `
+  tbody.innerHTML = lista.map(v => {
+    const residente = state.residentes.find(r => r.id === v.residenteId);
+    return `
     <tr>
       <td>${escapeHtml(v.nombre)}</td>
       <td><span class="depto-tag">${v.depto}</span></td>
+      <td>${escapeHtml(residente ? residente.nombre : '—')}</td>
       <td><span class="badge ${v.tipo}">${labelTipo(v.tipo)}</span></td>
-      <td><span class="badge ${v.estado}">${v.estado === 'activo' ? 'Dentro' : v.estado === 'borrador' ? 'Borrador' : 'Finalizado'}</span></td>
-      <td class="mono-dim">${v.horaEntrada || '—'}</td>
-      <td class="mono-dim">${v.horaSalida || '—'}</td>
+      <td class="mono-dim">${v.fecha}</td>
+      <td><span class="badge ${v.estado}">${v.estado === 'activo' ? 'Dentro' : 'Finalizado'}</span></td>
       <td><div class="row-actions">
         <button class="btn ghost small" data-action="editar-visitante" data-id="${v.id}">Editar</button>
         ${v.estado === 'activo' ? `<button class="btn ghost small" data-action="salida-visitante" data-id="${v.id}">Salida</button>` : ''}
         <button class="btn danger small" data-action="borrar-visitante" data-id="${v.id}">Borrar</button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   actualizarStats();
 }
@@ -236,9 +309,12 @@ function abrirModalVisitante(id) {
   document.getElementById('titulo-modal-visitante').textContent = esEdicion ? 'Editar visitante' : 'Nuevo visitante';
   document.getElementById('vis-id').value = esEdicion ? v.id : '';
   document.getElementById('vis-nombre').value = esEdicion ? v.nombre : '';
-  document.getElementById('vis-depto').value = esEdicion ? v.depto : DEPTOS[0];
-  document.getElementById('vis-estado').value = esEdicion ? v.estado : 'activo';
-  document.getElementById('vis-notas').value = esEdicion ? (v.notas || '') : '';
+  document.getElementById('vis-fecha').value = esEdicion ? v.fecha : nowParts().fecha;
+
+  poblarSelectDeptoVisitante();
+  const depto = esEdicion ? v.depto : document.getElementById('vis-depto').value;
+  document.getElementById('vis-depto').value = depto;
+  poblarSelectResidentePorDepto(depto, esEdicion ? v.residenteId : null);
 
   const tipoElegido = esEdicion ? v.tipo : 'unico';
   document.querySelectorAll('input[name="vis-tipo-radio"]').forEach(r => { r.checked = (r.value === tipoElegido); });
@@ -247,37 +323,50 @@ function abrirModalVisitante(id) {
 }
 function cerrarModalVisitante() { document.getElementById('modal-visitante').style.display = 'none'; }
 
-document.getElementById('btn-nuevo-visitante').addEventListener('click', () => abrirModalVisitante(null));
+document.getElementById('btn-nuevo-visitante').addEventListener('click', () => {
+  if (state.residentes.filter(r => r.estado === 'activo').length === 0) {
+    showToast('Primero da de alta al menos un residente');
+    return;
+  }
+  abrirModalVisitante(null);
+});
 document.getElementById('btn-cancelar-visitante').addEventListener('click', cerrarModalVisitante);
 document.getElementById('modal-visitante').addEventListener('click', e => { if (e.target.id === 'modal-visitante') cerrarModalVisitante(); });
+
+// al cambiar el depto dentro del modal, se recalcula la lista de residentes
+document.getElementById('vis-depto').addEventListener('change', e => {
+  poblarSelectResidentePorDepto(e.target.value, null);
+});
 
 document.getElementById('form-visitante').addEventListener('submit', e => {
   e.preventDefault();
   const id = document.getElementById('vis-id').value;
   const nombre = document.getElementById('vis-nombre').value.trim();
   const depto = document.getElementById('vis-depto').value;
-  const estado = document.getElementById('vis-estado').value;
-  const notas = document.getElementById('vis-notas').value.trim();
+  const residenteId = document.getElementById('vis-residente').value;
+  const fecha = document.getElementById('vis-fecha').value;
   const tipoRadio = document.querySelector('input[name="vis-tipo-radio"]:checked');
   const tipo = tipoRadio ? tipoRadio.value : 'unico';
+  const residente = state.residentes.find(r => r.id === residenteId);
 
-  if (!nombre) { showToast('El nombre es obligatorio'); return; }
+  if (!nombre) { showToast('El nombre del visitante es obligatorio'); return; }
+  if (!residente) { showToast('Selecciona un residente válido'); return; }
+  if (!fecha) { showToast('La fecha es obligatoria'); return; }
 
   if (!id) {
-    const { fecha, hora } = nowParts();
     state.visitantes.unshift({
-      id: uid(), nombre, depto, tipo, estado, notas,
-      fechaEntrada: fecha, horaEntrada: hora, horaSalida: null,
+      id: uid(), nombre, depto, residenteId, tipo, fecha,
+      estado: 'activo', horaEntrada: nowParts().hora, horaSalida: null,
     });
-    addLog('visitante', `Entrada: ${nombre} → ${depto} (${labelTipo(tipo)})`);
+    addLog('visitante', `Registro: ${nombre} visita a ${residente.nombre} (${depto}) — ${labelTipo(tipo)}`);
   } else {
     const v = state.visitantes.find(x => x.id === id);
-    Object.assign(v, { nombre, depto, tipo, estado, notas });
+    Object.assign(v, { nombre, depto, residenteId, tipo, fecha });
     addLog('visitante', `Registro actualizado: ${nombre} (${depto})`);
   }
 
   cerrarModalVisitante();
-  showToast('Visitante guardado');
+  showToast('Visitante registrado');
   renderVisitantes();
   renderBitacora();
 });
@@ -314,7 +403,9 @@ document.getElementById('vis-filtro-tipo').addEventListener('change', e => { fil
 document.getElementById('vis-filtro-estado').addEventListener('change', e => { filters.visitantes.estado = e.target.value; renderVisitantes(); });
 document.getElementById('vis-filtro-depto').addEventListener('change', e => { filters.visitantes.depto = e.target.value; renderVisitantes(); });
 
+// ============================================================
 // BITÁCORA
+// ============================================================
 function renderBitacora() {
   const f = filters.bitacora;
   const lista = state.bitacora.filter(b => {
@@ -340,8 +431,12 @@ function renderBitacora() {
 document.getElementById('log-buscar').addEventListener('input', e => { filters.bitacora.q = e.target.value; renderBitacora(); });
 document.getElementById('log-filtro-tipo').addEventListener('change', e => { filters.bitacora.tipo = e.target.value; renderBitacora(); });
 
-poblarSelectsDepto();
-poblarFiltroTipo();
+// ============================================================
+// ARRANQUE
+// ============================================================
+sembrarEjemplo();
+poblarSelectDeptoResidente();
+poblarFiltrosVisitantes();
 poblarRadiosTipo();
 renderResidentes();
 renderVisitantes();
